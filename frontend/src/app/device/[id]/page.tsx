@@ -15,6 +15,12 @@ interface DeviceTemplate {
   _id: string;
   name: string;
   description: string;
+  enabledSensors?: {
+    outputs?: boolean;
+    digitalSensors?: boolean;
+    analogSensors?: boolean;
+    rs485Sensors?: boolean;
+  };
   outputs: any[];
   digitalSensors: any[];
   analogSensors: any[];
@@ -56,6 +62,12 @@ export default function DeviceDetailPage({
   const fetchInProgressRef = React.useRef(false);
   const intervalRef = React.useRef<number | null>(null);
   const pendingCommandsRef = React.useRef<Record<string, { originalState: string; timeoutId: number }>>({});
+  const deviceRef = React.useRef<Device | null>(null);
+
+  // Keep deviceRef in sync with device state
+  React.useEffect(() => {
+    deviceRef.current = device;
+  }, [device]);
 
   const deriveOutputTopic = (output: any, index: number, tplTopics?: any) => {
     const base = tplTopics?.outputsBase;
@@ -302,91 +314,38 @@ export default function DeviceDetailPage({
                   settingsOutputs.forEach((item: any) => {
                     if (item && item.id) settingsMap[item.id] = item;
                   });
-                  const newStates = { ...tplOutputs.reduce((acc: any, out: any, idx: number) => {
-                    const merged = { ...out, ...(settingsMap[out.id] || {}) };
-                    const topicKey = deriveOutputTopic(merged, idx, tplTopics);
-                    acc[topicKey] = 'off';
-                    return acc;
-                }, {}) };
+                const newStates: Record<string, string> = {};
+                tplOutputs.forEach((out: any, idx: number) => {
+                  const merged = { ...out, ...(settingsMap[out.id] || {}) };
+                  const topicKey = deriveOutputTopic(merged, idx, tplTopics);
+                  newStates[topicKey] = 'off';
+                });
                 const statesSource = data.states || data.sensorReadings || {};
-                console.log('[Control] Expected topic keys:', Object.keys(newStates));
-                console.log('[Control] Polling received sensor data:', statesSource);
-                console.log('[Control] Current pending commands:', Object.keys(pendingCommandsRef.current));
+                console.log('[Control] Sensor data received:', statesSource);
                 
-                // Build a map of topic -> source from latest readings
-                const sourceMap: Record<string, string> = {};
-                if (data.latest && Array.isArray(data.latest)) {
-                  data.latest.forEach((reading: any) => {
-                    const topic = reading.topic;
-                    if (topic) {
-                      // Remove -state suffix for matching
-                      const key = topic.replace(/-state$/, '');
-                      sourceMap[key] = reading.source || 'unknown';
-                    }
-                  });
-                }
-                console.log('[Control] Source map:', sourceMap);
-                
-                let hasChanges = false;
-                
-                setControlledStates((prevStates) => {
-                  console.log('[Control] Previous states:', prevStates);
-                  Object.keys(newStates).forEach((outId) => {
-                    const val = statesSource[outId];
-                    console.log(`[Control] Processing ${outId}: value from sensor =`, val);
-                    if (typeof val !== 'undefined') {
-                      // normalize boolean/number/string
-                      let normalizedVal: string;
+                // Update states from sensor data - always trust device
+                Object.keys(newStates).forEach((outId) => {
+                  const val = statesSource[outId];
+                  if (typeof val !== 'undefined') {
+                    // normalize boolean/number/string
+                    let normalizedVal: string;
                       if (typeof val === 'string') {
                         normalizedVal = val === 'on' || val === '1' ? 'on' : val === 'off' || val === '0' ? 'off' : val;
                       } else if (typeof val === 'number') {
                         normalizedVal = val === 1 ? 'on' : 'off';
                       } else if (typeof val === 'boolean') {
                         normalizedVal = val ? 'on' : 'off';
-                      } else if (val && val.state) {
-                        normalizedVal = val.state === 'on' ? 'on' : 'off';
                       } else {
                         normalizedVal = String(val);
                       }
                       
-                      // If we have a pending command for this output, check if device confirmed the change
-                      if (pendingCommandsRef.current[outId]) {
-                        const pendingCmd = pendingCommandsRef.current[outId];
-                        const source = sourceMap[outId] || 'unknown';
-                        
-                        // Only clear pending command if:
-                        // 1. State changed from original (device responded)
-                        // 2. AND source is NOT 'web' (not just our own echo)
-                        if (normalizedVal !== pendingCmd.originalState && source !== 'web') {
-                          console.log(`[Control] Device confirmed state change for ${outId}: ${pendingCmd.originalState} → ${normalizedVal} (source: ${source})`);
-                          clearTimeout(pendingCmd.timeoutId);
-                          delete pendingCommandsRef.current[outId];
-                        } else if (source === 'web') {
-                          console.log(`[Control] Ignoring web-sourced reading for ${outId}, waiting for device confirmation`);
-                        } else {
-                          console.log(`[Control] Device hasn't responded yet for ${outId}, still at original state: ${normalizedVal} (source: ${source})`);
-                        }
-                      }
-                      
                       newStates[outId] = normalizedVal;
-                      
-                      // Only mark as changed if value differs from previous
-                      if (prevStates[outId] !== normalizedVal) {
-                        console.log(`[Control] State changed for ${outId}: ${prevStates[outId]} → ${normalizedVal}`);
-                        hasChanges = true;
-                      }
                     }
                   });
                   
-                  console.log('[Control] Has changes:', hasChanges);
-                  console.log('[Control] New states:', newStates);
-                  
-                  // Only update state if something actually changed
-                  if (hasChanges) {
-                    return newStates;
-                  }
-                  return prevStates;
-                });
+                  // Always update to latest device state
+                  setControlledStates(newStates);
+                  console.log('[Control] Updated states:', newStates);
                 } catch (e) {
                   console.error('[Device] Error deriving controlledStates from sensor data:', e);
                 }
@@ -408,7 +367,8 @@ export default function DeviceDetailPage({
     // Only fetch sensor data in polling, not device details
     intervalRef.current = window.setInterval(() => {
       if (!isInitialLoad) {
-        loadSensorData();
+        // Use deviceRef to get latest device state (avoid stale closure)
+        loadSensorData(deviceRef.current);
       }
     }, 5000);
 
@@ -433,35 +393,23 @@ export default function DeviceDetailPage({
     try {
       const token = localStorage.getItem("token") || "";
       const newState = currentState === "on" ? "off" : "on";
-      const originalState = currentState;
 
-      console.log(`[Control] Sending command: ${outputTopic} ${originalState} → ${newState}`);
+      console.log(`[Control] Sending command: ${outputTopic} ${currentState} → ${newState}`);
 
-      // Optimistically update local state
+      // Optimistically update local state immediately
       setControlledStates((prev) => ({
         ...prev,
         [outputTopic]: newState,
       }));
 
-      // Set timeout to revert if device doesn't respond within 5 seconds
+      // Set timeout to revert if device doesn't respond within 8 seconds
       const timeoutId = window.setTimeout(() => {
-        // Revert to original state if device hasn't confirmed the change
-        if (pendingCommandsRef.current[outputTopic]) {
-          console.log(`[Control] Timeout - reverting ${outputTopic} from ${newState} to ${originalState}`);
-          delete pendingCommandsRef.current[outputTopic];
-          setControlledStates((prev) => ({
-            ...prev,
-            [outputTopic]: originalState,
-          }));
-          setSuccessMessage("");
-        }
-      }, 5000);
-
-      // Track pending command
-      pendingCommandsRef.current[outputTopic] = {
-        originalState,
-        timeoutId,
-      };
+        console.log(`[Control] Timeout - reverting ${outputTopic} back to ${currentState}`);
+        setControlledStates((prev) => ({
+          ...prev,
+          [outputTopic]: currentState,
+        }));
+      }, 8000);
 
       // Send control command to backend
       const response = await fetch(
@@ -480,17 +428,74 @@ export default function DeviceDetailPage({
       );
 
       if (!response.ok) {
-        // Command failed, immediately revert
-        if (pendingCommandsRef.current[outputTopic]) {
-          clearTimeout(pendingCommandsRef.current[outputTopic].timeoutId);
-          delete pendingCommandsRef.current[outputTopic];
-        }
+        // Command failed, clear timeout and revert to original state
+        clearTimeout(timeoutId);
+        console.log(`[Control] Command failed, reverting ${outputTopic} to ${currentState}`);
         setControlledStates((prev) => ({
           ...prev,
-          [outputTopic]: originalState,
+          [outputTopic]: currentState,
         }));
         throw new Error("Failed to control device");
       }
+
+      console.log(`[Control] Command sent successfully: ${outputTopic} → ${newState}`);
+      
+      // Poll for state change confirmation
+      let pollCount = 0;
+      const maxPolls = 16; // Poll for up to 8 seconds (16 * 500ms)
+      
+      const pollInterval = setInterval(async () => {
+        pollCount++;
+        
+        try {
+          const sensorUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/mqtt/${id}/sensors`;
+          const sensorResponse = await fetch(sensorUrl, { 
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-cache'
+          });
+          
+          if (sensorResponse.ok) {
+            const data = await sensorResponse.json();
+            const statesSource = data.states || data.sensorReadings || {};
+            const val = statesSource[outputTopic];
+            
+            if (typeof val !== 'undefined') {
+              let normalizedVal: string;
+              if (typeof val === 'string') {
+                normalizedVal = val === 'on' || val === '1' ? 'on' : 'off';
+              } else if (typeof val === 'number') {
+                normalizedVal = val === 1 ? 'on' : 'off';
+              } else if (typeof val === 'boolean') {
+                normalizedVal = val ? 'on' : 'off';
+              } else {
+                normalizedVal = String(val);
+              }
+              
+              // Check if device confirmed the state change
+              if (normalizedVal === newState) {
+                console.log(`[Control] Device confirmed state: ${outputTopic} = ${normalizedVal}`);
+                clearTimeout(timeoutId);
+                clearInterval(pollInterval);
+                
+                // Update sensorData and ensure controlled state is correct
+                setSensorData(data);
+                setControlledStates((prev) => ({
+                  ...prev,
+                  [outputTopic]: normalizedVal,
+                }));
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[Control] Polling error:', err);
+        }
+        
+        // Stop polling after max attempts
+        if (pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+          console.log(`[Control] Stopped polling for ${outputTopic} after ${maxPolls} attempts`);
+        }
+      }, 500);
 
       // Remove success message display - command sent silently
       // setSuccessMessage("ส่งคำสั่งเรียบร้อย ✓");
@@ -633,7 +638,7 @@ export default function DeviceDetailPage({
           {/* Control Panel */}
           <div className="lg:col-span-2 space-y-6">
             {/* Digital Sensors */}
-            {mergedDigitalSensors && mergedDigitalSensors.length > 0 && (
+            {template?.enabledSensors?.digitalSensors !== false && mergedDigitalSensors && mergedDigitalSensors.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เซนเซอร์ดิจิทัล</h2>
                 <div className="grid grid-cols-1 grid-cols-2 md:grid-cols-4 gap-2">
@@ -725,14 +730,17 @@ export default function DeviceDetailPage({
             )}
 
             {/* Output Controls */}
-            {mergedOutputs && mergedOutputs.length > 0 && (
+            {template?.enabledSensors?.outputs !== false && mergedOutputs && mergedOutputs.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">การควบคุม</h2>
                 <div className="grid grid-cols-2 md:grid-cols-2 gap-2">
                   {mergedOutputs.map((output, idx) => {
                     const tplTopics = template?.topics;
                     const topicKey = deriveOutputTopic(output, idx, tplTopics);
-                    const stateVal = controlledStates[topicKey];
+                    const stateVal = controlledStates[topicKey] || 'off';
+                    
+                    console.log(`[Render] Output ${output.name} (${topicKey}): stateVal =`, stateVal, 'from controlledStates:', controlledStates);
+                    
                     return (
                     <div
                       key={output.id}
@@ -744,7 +752,7 @@ export default function DeviceDetailPage({
                         </h3>
                         <p
                           className={`text-sm ${
-                            controlledStates[output.id] === "on"
+                            stateVal === "on"
                               ? "text-green-600 dark:text-green-400"
                               : "text-gray-500 dark:text-gray-400"
                           }`}
@@ -784,7 +792,7 @@ export default function DeviceDetailPage({
             )}
 
             {/* Analog Sensors */}
-            {mergedAnalogSensors && mergedAnalogSensors.length > 0 && (
+            {template?.enabledSensors?.analogSensors !== false && mergedAnalogSensors && mergedAnalogSensors.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เซนเซอร์แอนะล็อก</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -831,7 +839,7 @@ export default function DeviceDetailPage({
             )}
 
             {/* RS485 Sensors */}
-            {mergedRs485Sensors && mergedRs485Sensors.length > 0 && (
+            {template?.enabledSensors?.rs485Sensors !== false && mergedRs485Sensors && mergedRs485Sensors.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เซนเซอร์ RS485</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

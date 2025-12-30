@@ -10,6 +10,12 @@ interface DeviceTemplate {
   _id: string;
   name: string;
   description?: string;
+  enabledSensors?: {
+    outputs?: boolean;
+    digitalSensors?: boolean;
+    analogSensors?: boolean;
+    rs485Sensors?: boolean;
+  };
   outputs: any[];
   digitalSensors: any[];
   analogSensors: any[];
@@ -210,7 +216,7 @@ export default function DeviceSettingsPage({
                 />
               </div>
 
-              {zones.length > 0 && (
+              {zones.length > 0 && device?.templateId?.enabledSensors?.outputs !== false && (
                 <div>
                   <h3 className="text-md font-semibold mb-2 text-gray-900 dark:text-white">ชื่อโซน Output</h3>
                   <div className="space-y-3">
@@ -236,7 +242,7 @@ export default function DeviceSettingsPage({
               )}
             </div>
 
-            {digitalSensors.length > 0 && (
+            {digitalSensors.length > 0 && device?.templateId?.enabledSensors?.digitalSensors !== false && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เซนเซอร์ Digital</h2>
                 <div className="space-y-6">
@@ -334,7 +340,7 @@ export default function DeviceSettingsPage({
               </div>
             )}
 
-            {analogSensors.length > 0 && (
+            {analogSensors.length > 0 && device?.templateId?.enabledSensors?.analogSensors !== false && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เซนเซอร์ Analog</h2>
                 <div className="space-y-6">
@@ -418,7 +424,7 @@ export default function DeviceSettingsPage({
               </div>
             )}
 
-            {rs485Sensors.length > 0 && (
+            {rs485Sensors.length > 0 && device?.templateId?.enabledSensors?.rs485Sensors !== false && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เซนเซอร์ RS485</h2>
                 <div className="space-y-6">

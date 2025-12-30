@@ -32,12 +32,13 @@ exports.createTemplate = async (req, res) => {
       return res.status(403).json({ message: 'Only admins can create templates' });
     }
 
-    const { name, description, outputs, digitalSensors, analogSensors, rs485Sensors, topics } =
+    const { name, description, enabledSensors, outputs, digitalSensors, analogSensors, rs485Sensors, topics } =
       req.body;
 
     const template = new DeviceTemplate({
       name,
       description,
+      enabledSensors: enabledSensors || { outputs: true, digitalSensors: true, analogSensors: true, rs485Sensors: true },
       outputs: outputs || [],
       digitalSensors: digitalSensors || [],
       analogSensors: analogSensors || [],
@@ -63,7 +64,7 @@ exports.updateTemplate = async (req, res) => {
       return res.status(403).json({ message: 'Only admins can update templates' });
     }
 
-    const { name, description, outputs, digitalSensors, analogSensors, rs485Sensors, topics } =
+    const { name, description, enabledSensors, outputs, digitalSensors, analogSensors, rs485Sensors, topics } =
       req.body;
 
     const template = await DeviceTemplate.findByIdAndUpdate(
@@ -71,6 +72,7 @@ exports.updateTemplate = async (req, res) => {
       {
         name,
         description,
+        enabledSensors,
         outputs,
         digitalSensors,
         analogSensors,

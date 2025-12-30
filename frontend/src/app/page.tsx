@@ -8,13 +8,20 @@ export default function Home() {
 
   useEffect(() => {
     document.title = "หน้าหลัก - KasetIOT";
-    router.push("/login");
+    
+    // Check if user is already logged in
+    const token = localStorage.getItem("token");
+    if (token) {
+      router.push("/dashboard");
+    } else {
+      router.push("/login");
+    }
   }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-800">กำลังโหลด...</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">กำลังโหลด...</h1>
       </div>
     </div>
   );

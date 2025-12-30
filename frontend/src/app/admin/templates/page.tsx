@@ -10,6 +10,12 @@ interface Template {
   _id: string;
   name: string;
   description: string;
+  enabledSensors?: {
+    outputs?: boolean;
+    digitalSensors?: boolean;
+    analogSensors?: boolean;
+    rs485Sensors?: boolean;
+  };
   outputs: any[];
   digitalSensors: any[];
   analogSensors: any[];
@@ -34,6 +40,7 @@ export default function AdminTemplatesPage() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    enabledSensors: { outputs: true, digitalSensors: true, analogSensors: true, rs485Sensors: true },
     topics: { outputsBase: "", digitalSensorsBase: "", analogSensorsBase: "", rs485SensorsBase: "" },
     outputs: [{ id: "output_1", name: "output1", type: "digital" }],
     digitalSensors: [{ id: "digital_1", name: "", onLabel: "ON", offLabel: "OFF", icon: "", onColor: "", activeLow: true }],
@@ -80,8 +87,15 @@ export default function AdminTemplatesPage() {
 
   const handleEdit = (template: Template) => {
     setEditingTemplate(template);
+    const enabledSensors = template.enabledSensors || {};
     setFormData({
       ...template,
+      enabledSensors: { 
+        outputs: enabledSensors.outputs !== false, 
+        digitalSensors: enabledSensors.digitalSensors !== false, 
+        analogSensors: enabledSensors.analogSensors !== false, 
+        rs485Sensors: enabledSensors.rs485Sensors !== false 
+      },
       topics: {
         outputsBase: template.topics?.outputsBase || "",
         digitalSensorsBase: template.topics?.digitalSensorsBase || "",
@@ -130,6 +144,7 @@ export default function AdminTemplatesPage() {
     setFormData({
       name: "",
       description: "",
+      enabledSensors: { outputs: true, digitalSensors: true, analogSensors: true, rs485Sensors: true },
       topics: { outputsBase: "", digitalSensorsBase: "", analogSensorsBase: "", rs485SensorsBase: "" },
       outputs: [{ id: "output_1", name: "output1", type: "digital" }],
       digitalSensors: [{ id: "digital_1", name: "", onLabel: "ON", offLabel: "OFF", icon: "", onColor: "", activeLow: true }],
@@ -290,7 +305,85 @@ export default function AdminTemplatesPage() {
                   />
                 </div>
 
+                {/* Enable/Disable Sensor Types */}
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    เปิด/ปิดการใช้งานเซนเซอร์แต่ละประเภท
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Outputs (การควบคุม)</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ 
+                          ...formData, 
+                          enabledSensors: { ...formData.enabledSensors, outputs: !formData.enabledSensors.outputs } 
+                        })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          formData.enabledSensors.outputs ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.enabledSensors.outputs ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </label>
+                    <label className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Digital Sensors (เซนเซอร์ดิจิทัล)</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ 
+                          ...formData, 
+                          enabledSensors: { ...formData.enabledSensors, digitalSensors: !formData.enabledSensors.digitalSensors } 
+                        })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          formData.enabledSensors.digitalSensors ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.enabledSensors.digitalSensors ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </label>
+                    <label className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Analog Sensors (เซนเซอร์แอนะล็อก)</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ 
+                          ...formData, 
+                          enabledSensors: { ...formData.enabledSensors, analogSensors: !formData.enabledSensors.analogSensors } 
+                        })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          formData.enabledSensors.analogSensors ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.enabledSensors.analogSensors ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </label>
+                    <label className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">RS485 Sensors (เซนเซอร์ RS485)</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ 
+                          ...formData, 
+                          enabledSensors: { ...formData.enabledSensors, rs485Sensors: !formData.enabledSensors.rs485Sensors } 
+                        })}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          formData.enabledSensors.rs485Sensors ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.enabledSensors.rs485Sensors ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Outputs */}
+                {formData.enabledSensors.outputs && (
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -354,8 +447,10 @@ export default function AdminTemplatesPage() {
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Digital Sensors */}
+                {formData.enabledSensors.digitalSensors && (
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -493,8 +588,10 @@ export default function AdminTemplatesPage() {
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Analog Sensors */}
+                {formData.enabledSensors.analogSensors && (
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -571,8 +668,10 @@ export default function AdminTemplatesPage() {
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* RS485 Sensors */}
+                {formData.enabledSensors.rs485Sensors && (
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -672,6 +771,7 @@ export default function AdminTemplatesPage() {
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Buttons */}
                 <div className="flex gap-3 pt-4">

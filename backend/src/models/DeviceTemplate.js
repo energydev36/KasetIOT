@@ -9,6 +9,13 @@ const deviceTemplateSchema = new mongoose.Schema(
       trim: true,
     },
     description: String,
+    // Enable/disable flags for each sensor type
+    enabledSensors: {
+      outputs: { type: Boolean, default: true },
+      digitalSensors: { type: Boolean, default: true },
+      analogSensors: { type: Boolean, default: true },
+      rs485Sensors: { type: Boolean, default: true },
+    },
     topics: {
       outputsBase: String,
       digitalSensorsBase: String,
