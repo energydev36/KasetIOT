@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import SidebarLayout from "@/components/SidebarLayout";
 import * as api from "@/lib/api";
 import { IconRegistry } from "@/components/IconSelector";
+import { Clock, Settings } from "lucide-react";
 
 // Module-scoped in-memory request dedupe caches to survive remounts in StrictMode
 const deviceFetchCache: Record<string, Promise<any> | undefined> = {};
@@ -491,8 +492,9 @@ export default function DeviceDetailPage({
         throw new Error("Failed to control device");
       }
 
-      setSuccessMessage("ส่งคำสั่งเรียบร้อย ✓");
-      setTimeout(() => setSuccessMessage(""), 3000);
+      // Remove success message display - command sent silently
+      // setSuccessMessage("ส่งคำสั่งเรียบร้อย ✓");
+      // setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to control output");
     }
@@ -606,14 +608,127 @@ export default function DeviceDetailPage({
           </div>
         )}
 
+        {/* Quick Actions - Mobile Only (Top) */}
+        <div className="lg:hidden mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เมนู</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => router.push(`/device/${device._id}/schedule`)}
+              className="flex items-center justify-center gap-3 px-4 py-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+            >
+              <Clock size={32} />
+              <span className="text-base font-medium">ตั้งเวลา</span>
+            </button>
+            <button
+              onClick={() => router.push(`/device/${device._id}/settings`)}
+              className="flex items-center justify-center gap-3 px-4 py-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+            >
+              <Settings size={32} />
+              <span className="text-base font-medium">ตั้งค่า</span>
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Control Panel */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Digital Sensors */}
+            {mergedDigitalSensors && mergedDigitalSensors.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เซนเซอร์ดิจิทัล</h2>
+                <div className="grid grid-cols-1 grid-cols-2 md:grid-cols-4 gap-2">
+                  {mergedDigitalSensors.map((sensor, idx) => {
+                    const tplTopics = template?.topics;
+                    const topicKey = deriveDigitalTopic(sensor, idx, tplTopics);
+                    const readingVal = sensorData?.sensorReadings?.[topicKey];
+                    
+                    // Normalize reading value to on/off string (don't flip based on activeLow)
+                    let displayState = "off";
+                    if (typeof readingVal !== "undefined") {
+                      if (typeof readingVal === 'string') {
+                        displayState = readingVal.toLowerCase() === 'on' || readingVal === '1' ? 'on' : 'off';
+                      } else if (typeof readingVal === 'number') {
+                        displayState = readingVal === 1 ? 'on' : 'off';
+                      } else if (typeof readingVal === 'boolean') {
+                        displayState = readingVal ? 'on' : 'off';
+                      }
+                    }
+                    
+                    const isOn = displayState === 'on';
+                    const IconComponent = sensor.icon && IconRegistry[sensor.icon] 
+                      ? IconRegistry[sensor.icon] 
+                      : null;
+                    
+                    // Generate light background color from sensor.onColor
+                    const getLightBackground = (color: string) => {
+                      if (!color) return undefined;
+                      // Remove # if present
+                      const hex = color.replace('#', '');
+                      // Parse RGB
+                      const r = parseInt(hex.substring(0, 2), 16);
+                      const g = parseInt(hex.substring(2, 4), 16);
+                      const b = parseInt(hex.substring(4, 6), 16);
+                      // Return with low opacity (20% opacity for better visibility)
+                      return `rgba(${r}, ${g}, ${b}, 0.2)`;
+                    };
+                    
+                    const cardBgColor = sensor.onColor && isOn 
+                      ? getLightBackground(sensor.onColor) 
+                      : '';
+                    
+                    return (
+                    <div
+                      key={sensor.id}
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-colors"
+                      style={cardBgColor ? {
+                        backgroundColor: cardBgColor
+                      } : {}}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        {IconComponent && <IconComponent size={20} className="text-gray-600 dark:text-gray-400" />}
+                        <h3 className="font-medium text-gray-800 dark:text-white">
+                          {sensor.name}
+                        </h3>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {typeof readingVal !== "undefined" && (
+                          <div>
+                            <span
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                sensor.onColor && isOn
+                                  ? `text-white`
+                                  : isOn
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200"
+                              }`}
+                              style={
+                                sensor.onColor && isOn
+                                  ? { backgroundColor: sensor.onColor }
+                                  : {}
+                              }
+                            >
+                              {isOn ? (sensor.onLabel || "ON") : (sensor.offLabel || "OFF")}
+                            </span>
+                          </div>
+                        )}
+                        {typeof readingVal === "undefined" && (
+                          <div className="text-sm text-gray-400 dark:text-gray-500">
+                            ไม่มีข้อมูล
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Output Controls */}
             {mergedOutputs && mergedOutputs.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">การควบคุม</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-2">
                   {mergedOutputs.map((output, idx) => {
                     const tplTopics = template?.topics;
                     const topicKey = deriveOutputTopic(output, idx, tplTopics);
@@ -661,84 +776,6 @@ export default function DeviceDetailPage({
                           }`}
                         />
                       </button>
-                    </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Digital Sensors */}
-            {mergedDigitalSensors && mergedDigitalSensors.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เซนเซอร์ดิจิทัล</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {mergedDigitalSensors.map((sensor, idx) => {
-                    const tplTopics = template?.topics;
-                    const topicKey = deriveDigitalTopic(sensor, idx, tplTopics);
-                    const readingVal = sensorData?.sensorReadings?.[topicKey];
-                    
-                    // Normalize reading value to on/off string (don't flip based on activeLow)
-                    let displayState = "off";
-                    if (typeof readingVal !== "undefined") {
-                      if (typeof readingVal === 'string') {
-                        displayState = readingVal.toLowerCase() === 'on' || readingVal === '1' ? 'on' : 'off';
-                      } else if (typeof readingVal === 'number') {
-                        displayState = readingVal === 1 ? 'on' : 'off';
-                      } else if (typeof readingVal === 'boolean') {
-                        displayState = readingVal ? 'on' : 'off';
-                      }
-                    }
-                    
-                    const isOn = displayState === 'on';
-                    const IconComponent = sensor.icon && IconRegistry[sensor.icon] 
-                      ? IconRegistry[sensor.icon] 
-                      : null;
-                    
-                    return (
-                    <div
-                      key={sensor.id}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 dark:bg-gray-700"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        {IconComponent && <IconComponent size={20} className="text-gray-600 dark:text-gray-400" />}
-                        <h3 className="font-medium text-gray-800 dark:text-white">
-                          {sensor.name}
-                        </h3>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 capitalize">
-                        Digital Sensor {sensor.activeLow ? "(Active Low)" : "(Active High)"}
-                      </p>
-                      <div className="mt-3 space-y-2">
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Topic: {topicKey}
-                        </div>
-                        {typeof readingVal !== "undefined" && (
-                          <div>
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                sensor.onColor && isOn
-                                  ? `text-white`
-                                  : isOn
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                  : "bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200"
-                              }`}
-                              style={
-                                sensor.onColor && isOn
-                                  ? { backgroundColor: sensor.onColor }
-                                  : {}
-                              }
-                            >
-                              {isOn ? (sensor.onLabel || "ON") : (sensor.offLabel || "OFF")}
-                            </span>
-                          </div>
-                        )}
-                        {typeof readingVal === "undefined" && (
-                          <div className="text-sm text-gray-400 dark:text-gray-500">
-                            ไม่มีข้อมูล
-                          </div>
-                        )}
-                      </div>
                     </div>
                     );
                   })}
@@ -839,100 +876,27 @@ export default function DeviceDetailPage({
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Device Info */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">ข้อมูลอุปกรณ์</h2>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">หมายเลขอุปกรณ์</p>
-                  <p className="font-medium font-mono text-gray-900 dark:text-white">{device.serialNumber}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">เทมเพลต</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{template?.name || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">สถานะ</p>
-                  <p
-                    className={`font-medium ${
-                      device.status === "online"
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
-                    }`}
-                  >
-                    {device.status === "online" ? "ออนไลน์" : "ออฟไลน์"}
-                  </p>
-                </div>
-                {device.lastSeen && (
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400">ออนไลน์ล่าสุด</p>
-                    <p className="font-medium text-xs text-gray-900 dark:text-white">
-                      {new Date(device.lastSeen).toLocaleString("th-TH")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Template Info */}
-            {template && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เทมเพลต</h2>
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                  {template.description && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {template.description}
-                    </p>
-                  )}
-                  <div className="mt-3 space-y-2">
-                    <div className="flex justify-between">
-                      <span>Output:</span>
-                      <span className="font-medium">
-                        {template.outputs?.length || 0}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Digital:</span>
-                      <span className="font-medium">
-                        {template.digitalSensors?.length || 0}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Analog:</span>
-                      <span className="font-medium">
-                        {template.analogSensors?.length || 0}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>RS485:</span>
-                      <span className="font-medium">
-                        {template.rs485Sensors?.length || 0}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Quick Actions */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            {/* Quick Actions - Desktop Only (hidden on mobile) */}
+            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">เมนู</h2>
               <div className="space-y-2">
                 <button
                   onClick={() =>
                     router.push(`/device/${device._id}/schedule`)
                   }
-                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
                 >
-                  ⏰ ตั้งเวลา
+                  <Clock size={20} />
+                  <span>ตั้งเวลา</span>
                 </button>
                 <button
                   onClick={() =>
                     router.push(`/device/${device._id}/settings`)
                   }
-                  className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
                 >
-                  ⚙️ ตั้งค่า
+                  <Settings size={20} />
+                  <span>ตั้งค่า</span>
                 </button>
               </div>
             </div>

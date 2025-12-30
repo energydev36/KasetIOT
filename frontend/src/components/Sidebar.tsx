@@ -48,7 +48,7 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
           <h1 className="text-lg font-bold text-gray-900 dark:text-white">IoT Hub</h1>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-900 dark:text-white"
           >
             {mobileMenuOpen ? (
               <ChevronLeft className="w-6 h-6" />
@@ -62,8 +62,8 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
 
         {/* Mobile Menu Dropdown */}
         {mobileMenuOpen && (
-          <div className="border-t border-gray-200 dark:border-gray-700 max-h-[calc(100vh-60px)] overflow-y-auto">
-            <div className="p-4 space-y-2">
+          <div className="fixed inset-x-0 top-[57px] bottom-0 bg-white dark:bg-gray-900 overflow-y-auto flex flex-col">
+            <div className="p-4 space-y-2 flex-1">
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
@@ -74,7 +74,7 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                 }`}
               >
                 <Home className="w-5 h-5" />
-                <span>Dashboard</span>
+                <span>แดชบอร์ด</span>
               </Link>
 
               <Link
@@ -87,14 +87,14 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                 }`}
               >
                 <User className="w-5 h-5" />
-                <span>Profile</span>
+                <span>โปรไฟล์</span>
               </Link>
 
               {(userRole === "admin" || userRole === "supervisor") && (
                 <>
                   <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
                   <div className="px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                    Admin
+                    แอดมิน
                   </div>
 
                   <Link
@@ -107,7 +107,7 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                     }`}
                   >
                     <Users className="w-5 h-5" />
-                    <span>Members</span>
+                    <span>สมาชิก</span>
                   </Link>
 
                   <Link
@@ -120,7 +120,7 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                     }`}
                   >
                     <Cpu className="w-5 h-5" />
-                    <span>Devices</span>
+                    <span>อุปกรณ์</span>
                   </Link>
 
                   <Link
@@ -133,58 +133,62 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                     }`}
                   >
                     <FileText className="w-5 h-5" />
-                    <span>Templates</span>
+                    <span>เทมเพลต</span>
                   </Link>
                 </>
               )}
 
+            </div>
+
+            {/* Theme selector and Logout - Always at bottom */}
+            <div className="mt-auto border-t border-gray-200 dark:border-gray-700">
               {/* Theme selector for mobile */}
               {mounted && (
-                <div className="my-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-4">Theme</div>
-                  <div className="flex gap-2 px-4">
+                <div className="p-4">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">ธีม</div>
+                  <div className="flex gap-2">
                     <button
                       onClick={() => setTheme("system")}
-                      className={`flex-1 px-3 py-2 rounded text-sm border border-gray-300 dark:border-gray-700 ${
+                      className={`flex-1 px-3 py-2 rounded text-sm border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white ${
                         theme === "system"
                           ? "bg-gray-200 dark:bg-gray-800"
                           : "hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
                     >
-                      System
+                      ระบบ
                     </button>
                     <button
                       onClick={() => setTheme("light")}
-                      className={`flex-1 px-3 py-2 rounded text-sm border border-gray-300 dark:border-gray-700 ${
+                      className={`flex-1 px-3 py-2 rounded text-sm border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white ${
                         theme === "light"
                           ? "bg-gray-200 dark:bg-gray-800"
                           : "hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
                     >
-                      Light
+                      สว่าง
                     </button>
                     <button
                       onClick={() => setTheme("dark")}
-                      className={`flex-1 px-3 py-2 rounded text-sm border border-gray-300 dark:border-gray-700 ${
+                      className={`flex-1 px-3 py-2 rounded text-sm border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white ${
                         theme === "dark"
                           ? "bg-gray-200 dark:bg-gray-800"
                           : "hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
                     >
-                      Dark
+                      มืด
                     </button>
                   </div>
                 </div>
               )}
 
               {/* Logout for mobile */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <div className="p-4 pt-0">
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-red-600 hover:bg-red-700 transition-colors text-white"
                 >
                   <LogOut className="w-5 h-5" />
-                  <span>Logout</span>
+                  <span>ออกจากระบบ</span>
                 </button>
               </div>
             </div>
@@ -220,10 +224,10 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                 ? "bg-green-600 text-white"
                 : "hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
-            title={!isOpen ? "Dashboard" : ""}
+            title={!isOpen ? "แดชบอร์ด" : ""}
           >
             <Home className="w-5 h-5 flex-shrink-0" />
-            {isOpen && <span>Dashboard</span>}
+            {isOpen && <span>แดชบอร์ด</span>}
           </Link>
 
           {/* Profile */}
@@ -234,10 +238,10 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                 ? "bg-green-600 text-white"
                 : "hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
-            title={!isOpen ? "Profile" : ""}
+            title={!isOpen ? "โปรไฟล์" : ""}
           >
             <User className="w-5 h-5 flex-shrink-0" />
-            {isOpen && <span>Profile</span>}
+            {isOpen && <span>โปรไฟล์</span>}
           </Link>
 
           {/* Admin Only */}
@@ -245,7 +249,7 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
             <>
               <div className={`my-4 border-t border-gray-200 dark:border-gray-700 ${!isOpen && "hidden"}`} />
               <div className={`px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase ${!isOpen && "hidden"}`}>
-                Admin
+                แอดมิน
               </div>
 
               <Link
@@ -255,10 +259,10 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                     ? "bg-blue-600 text-white"
                     : "hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
-                title={!isOpen ? "Members" : ""}
+                title={!isOpen ? "สมาชิก" : ""}
               >
                 <Users className="w-5 h-5 flex-shrink-0" />
-                {isOpen && <span>Members</span>}
+                {isOpen && <span>สมาชิก</span>}
               </Link>
 
               <Link
@@ -268,10 +272,10 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                     ? "bg-blue-600 text-white"
                     : "hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
-                title={!isOpen ? "Devices" : ""}
+                title={!isOpen ? "อุปกรณ์" : ""}
               >
                 <Cpu className="w-5 h-5 flex-shrink-0" />
-                {isOpen && <span>Devices</span>}
+                {isOpen && <span>อุปกรณ์</span>}
               </Link>
 
               <Link
@@ -281,10 +285,10 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
                     ? "bg-blue-600 text-white"
                     : "hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}
-                title={!isOpen ? "Templates" : ""}
+                title={!isOpen ? "เทมเพลต" : ""}
               >
                 <FileText className="w-5 h-5 flex-shrink-0" />
-                {isOpen && <span>Templates</span>}
+                {isOpen && <span>เทมเพลต</span>}
               </Link>
             </>
           )}
@@ -294,37 +298,37 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
         <div className="absolute bottom-16 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
           {isOpen && mounted && (
             <div>
-              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Theme</div>
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">ธีม</div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setTheme("system")}
-                  className={`px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 ${
+                  className={`px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white ${
                     theme === "system"
                       ? "bg-gray-200 dark:bg-gray-800"
                       : "hover:bg-gray-100 dark:hover:bg-gray-700"
                   }`}
                 >
-                  System
+                  ระบบ
                 </button>
                 <button
                   onClick={() => setTheme("light")}
-                  className={`px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 ${
+                  className={`px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white ${
                     theme === "light"
                       ? "bg-gray-200 dark:bg-gray-800"
                       : "hover:bg-gray-100 dark:hover:bg-gray-700"
                   }`}
                 >
-                  Light
+                  สว่าง
                 </button>
                 <button
                   onClick={() => setTheme("dark")}
-                  className={`px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 ${
+                  className={`px-3 py-1 rounded text-sm border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white ${
                     theme === "dark"
                       ? "bg-gray-200 dark:bg-gray-800"
                       : "hover:bg-gray-100 dark:hover:bg-gray-700"
                   }`}
                 >
-                  Dark
+                  มืด
                 </button>
               </div>
             </div>
@@ -336,10 +340,10 @@ export default function Sidebar({ userRole, isOpen, setIsOpen }: SidebarProps) {
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition-colors text-white"
-            title={!isOpen ? "Logout" : ""}
+            title={!isOpen ? "ออกจากระบบ" : ""}
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            {isOpen && <span>Logout</span>}
+            {isOpen && <span>ออกจากระบบ</span>}
           </button>
         </div>
       </aside>

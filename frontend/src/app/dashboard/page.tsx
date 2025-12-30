@@ -165,16 +165,6 @@ export default function DashboardPage() {
       <header className="bg-white dark:bg-gray-800 shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Dashboard</h1>
-          <button
-            onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              router.push("/login");
-            }}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-          >
-            ออกจากระบบ
-          </button>
         </div>
       </header>
 
@@ -292,9 +282,11 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   value={newDevice.serialNumber}
-                  onChange={(e) =>
-                    setNewDevice({ ...newDevice, serialNumber: e.target.value })
-                  }
+                  onChange={(e) => {
+                    // Allow only uppercase A-Z and digits 0-9
+                    const sanitized = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                    setNewDevice({ ...newDevice, serialNumber: sanitized });
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="KS001"
                 />

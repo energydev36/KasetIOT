@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode, createContext, useContext, useState } from "react";
+import React, { ReactNode, createContext, useContext, useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import ThemeProvider from "./ThemeProvider";
 
@@ -26,6 +26,23 @@ interface SidebarLayoutProps {
 
 export default function SidebarLayout({ children, userRole }: SidebarLayoutProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  // Load sidebar state from localStorage on mount
+  useEffect(() => {
+    setMounted(true);
+    const savedState = localStorage.getItem("sidebarOpen");
+    if (savedState !== null) {
+      setIsOpen(savedState === "true");
+    }
+  }, []);
+
+  // Save sidebar state to localStorage when it changes
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem("sidebarOpen", String(isOpen));
+    }
+  }, [isOpen, mounted]);
 
   return (
     <SidebarContext.Provider value={{ isOpen, setIsOpen }}>
