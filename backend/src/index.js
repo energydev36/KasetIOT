@@ -16,9 +16,25 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+// Configure CORS to allow the frontend origin(s).
+// Set FRONTEND_URL or ALLOWED_ORIGINS (comma-separated) in environment for production.
+const rawAllowed = process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || '';
+const allowedOrigins = rawAllowed.split(',').map(s => s.trim()).filter(Boolean);
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? 'https://yourdomain.com' : 'http://localhost:3000',
-  credentials: true,
+    origin: function (origin, callback) {
+        // Allow non-browser requests (e.g. server to server or curl)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.length === 0) {
+            // No restriction configured in env - allow all origins
+            return callback(null, true);
+        }
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
+        }
+        return callback(new Error('CORS policy: Origin not allowed'));
+    },
+    credentials: true,
 }));
 app.use(express.json());
 
